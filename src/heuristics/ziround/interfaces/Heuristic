@@ -1,0 +1,6 @@
+package heuristics.ziround.interfaces;
+
+public interface Heuristic {
+
+
+}
