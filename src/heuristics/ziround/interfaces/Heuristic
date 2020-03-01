@@ -2,5 +2,8 @@ package heuristics.ziround.interfaces;
 
 public interface Heuristic {
 
-
+    /**
+     * Applies its heuristic algorithm
+     */
+    void applyHeuristics();
 }

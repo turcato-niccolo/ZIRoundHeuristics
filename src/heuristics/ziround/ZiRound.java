@@ -1,10 +1,7 @@
 package heuristics.ziround;
 
-import ilog.concert.IloConstraint;
-import ilog.concert.IloNumExpr;
-import ilog.concert.IloNumVar;
-import ilog.concert.IloObjective;
-import ilog.cplex.IloCplex;
+import heuristics.ziround.interfaces.Heuristic;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * This class uses the library {@link ilog.cplex}
@@ -12,16 +9,22 @@ import ilog.cplex.IloCplex;
  *
  * @author Turcato
  */
-public class ZiRound {
-    IloCplex cplex;
+public class ZiRound implements Heuristic {
+    private MMipModel model;
+    private MMipModel.NumVariable[] solutions;
 
     /**
      * Constructor that initializes an instance of {@link #ZiRound}
+     * Takes a solved Model
+     *
+     * @param model A solved Model
      */
-    public ZiRound(IloNumVar[] variables, IloConstraint[] constraints, IloObjective objective) {
-        IloNumExpr expr;
-
+    public ZiRound(@NotNull MMipModel model) {
+        this.model = model;
+        solutions = model.getVariables();
     }
 
+    public void applyHeuristics() {
 
+    }
 }
