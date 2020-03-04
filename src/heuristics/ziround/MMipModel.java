@@ -34,7 +34,7 @@ public class MMipModel {
      */
     public boolean setVariables(@NotNull NumVariable[] variables) {
         if ((this.variables == null && (objMultipliers == null || variables.length == objMultipliers.length)) ||
-                (getNumVariables() == variables.length)) {
+                (countNumVariables() == variables.length)) {
             this.variables = variables;
             return true;
         }
@@ -55,51 +55,125 @@ public class MMipModel {
     }
 
     /**
-     * Changes the expression of constraints to the given type
-     * <p>
-     * Currently supported: {@link ExprType#LESS_OR_EQUAL}
+     * Sets the integer constraints for each variable indicated in the array of indexes
      *
-     * @param exprType The new type of expression to impose to all constraints
-     * @return {@code True} if converting was possible
+     * @param index The indexes of the model's variables
+     * @return {@code True} if it was possible to impose the constraints, {@code False} otherwise
      */
-    public boolean changeConstraintsTo(ExprType exprType) {
+    public boolean setIntegerConstraints(int[] index) {
+        for (int i = 0; i < index.length; i++)
+            try {
+                variables[index[i]].setType(VarType.INT);
+            } catch (InvalidAttributeValueException e) {
+                return false;
+            }
+        return true;
+    }
+
+
+    /**
+     * Changes all MORE_THAN and MORE_OR_EQUAL constraints to LESS_THAN and LESS_OR_EQUAL respectively
+     */
+    public void changeConstraintsToLessThan() {
         int i = 0; //index for the current constraint
         for (double[] constraintMultipliers : multiplierMatrix) {
-            if (!(constraintsExprTypes[i] == exprType)) {
-                switch (exprType) {
-                    //type of expression to which convert
-                    case LESS_OR_EQUAL:
-                        //type of expression to be converted
-                        switch (constraintsExprTypes[i]) {
-                            case LESS_OR_EQUAL:
-                                break;
-                            case MORE_OR_EQUAL:
-                                for (double constraintMultiplier : constraintMultipliers) {
-                                    constraintMultiplier = -constraintMultiplier;
-                                }
-                                expressionValue[i] = expressionValue[i];
-                                constraintsExprTypes[i] = ExprType.LESS_OR_EQUAL;
-                                break;
+            switch (constraintsExprTypes[i]) {
+                case EQUAL:
+                case LESS_THAN:
+                case LESS_OR_EQUAL:
+                    break;
 
+                case MORE_THAN:
+                    for (int j = 0; j < constraintMultipliers.length; j++) {
+                        constraintMultipliers[j] = -constraintMultipliers[j];
+                    }
+                    expressionValue[i] = -expressionValue[i];
+                    constraintsExprTypes[i] = ExprType.LESS_THAN;
+                    break;
 
-                        }
-                        break;
-
-                    default:
-                        return false;
-                }
+                case MORE_OR_EQUAL:
+                    for (int j = 0; j < constraintMultipliers.length; j++) {
+                        constraintMultipliers[j] = -constraintMultipliers[j];
+                    }
+                    expressionValue[i] = -expressionValue[i];
+                    constraintsExprTypes[i] = ExprType.LESS_OR_EQUAL;
+                    break;
             }
+            i++;
         }
+    }
 
-        return true;
+    /**
+     * Changes all LESS_THAN and LESS_OR_EQUAL constraints to MORE_THAN and MORE_OR_EQUAL respectively
+     */
+    public void changeConstraintsToMoreThan() {
+        int i = 0; //index for the current constraint
+        for (double[] constraintMultipliers : multiplierMatrix) {
+            switch (constraintsExprTypes[i]) {
+                case EQUAL:
+                case MORE_THAN:
+                case MORE_OR_EQUAL:
+                    break;
+
+                case LESS_THAN:
+                    for (int j = 0; j < constraintMultipliers.length; j++) {
+                        constraintMultipliers[j] = -constraintMultipliers[j];
+                    }
+                    expressionValue[i] = -expressionValue[i];
+                    constraintsExprTypes[i] = ExprType.MORE_THAN;
+                    break;
+
+                case LESS_OR_EQUAL:
+                    for (int j = 0; j < constraintMultipliers.length; j++) {
+                        constraintMultipliers[j] = -constraintMultipliers[j];
+                    }
+                    expressionValue[i] = -expressionValue[i];
+                    constraintsExprTypes[i] = ExprType.MORE_OR_EQUAL;
+                    break;
+            }
+            i++;
+        }
+    }
+
+    /**
+     * Returns the slacks for the given constraints, if the constraint is a = expression, it will always return 0
+     *
+     * @param i Index of a constraint
+     * @return Current slack of i° constraint
+     */
+    public double getConstraintSlack(int i) {
+        if (constraintsExprTypes[i] == ExprType.EQUAL)
+            return 0;
+        //value of the left member of the constraint's expression
+        double leftValue = 0;
+        for (int col = 0; col < multiplierMatrix[i].length; col++) {
+            leftValue += multiplierMatrix[i][col] * variables[col].getValue();
+        }
+        switch (constraintsExprTypes[i]) {
+            case LESS_THAN:
+            case LESS_OR_EQUAL:
+                return expressionValue[i] - leftValue;
+
+            case MORE_THAN:
+            case MORE_OR_EQUAL:
+                return leftValue - expressionValue[i];
+        }
+        return 0;
     }
 
     /**
      * @return The number of variables of this model
      * @throws NullPointerException If there aren't any variables
      */
-    public int getNumVariables() throws NullPointerException {
+    public int countNumVariables() throws NullPointerException {
         return this.variables.length;
+    }
+
+    /**
+     * @return The number of constraints of thi model
+     */
+    public int countConstraints() {
+        return constraintsExprTypes.length;
     }
 
     /**
@@ -110,11 +184,19 @@ public class MMipModel {
      * @return True if the obj function has been accepted depending by the number of variables
      */
     public boolean setObjective(ObjType objType, @NotNull double[] multipliers) {
-        if (this.variables == null || getNumVariables() == multipliers.length) {
+        if (this.variables == null || countNumVariables() == multipliers.length) {
             this.objMultipliers = multipliers;
             this.objType = objType;
+            return true;
         }
         return false;
+    }
+
+    /**
+     * @return The type of objective function {max, min}
+     */
+    public ObjType getObjType() {
+        return objType;
     }
 
     /**
@@ -134,7 +216,7 @@ public class MMipModel {
         return false;
     }
 
-    public double[] getExpressionValue() {
+    public double[] getExpressionsValues() {
         return expressionValue;
     }
 
@@ -146,7 +228,7 @@ public class MMipModel {
         return objMultipliers;
     }
 
-    public double getObjMultipliers(int i) {
+    public double getObjMultiplier(int i) {
         return objMultipliers[i];
     }
 
@@ -159,7 +241,7 @@ public class MMipModel {
      * @param j #Column
      * @return The multiplier a row i and column j of the constraints matrix
      */
-    public double getMultiplierMatrix(int i, int j) {
+    public double getConstraintsMultiplier(int i, int j) {
         return multiplierMatrix[i][j];
     }
 
@@ -175,118 +257,10 @@ public class MMipModel {
         return variables;
     }
 
-    public NumVariable getVariables(int i) {
+    public NumVariable getVariable(int i) {
         return variables[i];
     }
 
-    /**
-     * Simple class representing a Variable, can be of 2 types:
-     * -Integer
-     * -Real
-     */
-    public class NumVariable {
-        private VarType type;
-        private double value;
-        private double upBound;
-        private double lowBound;
-
-        private static final String VALUE_NOT_INT_ERROR = "The var's type is Integer but the value is not";
-
-        /**
-         * Constructor, builds the object variable starting from the Type, the value, the UPPER and LOWER bound
-         *
-         * @param type     Type of Variable
-         * @param value    Value of the Variable
-         * @param upBound  UpperBound
-         * @param lowBound LowerBound
-         * @throws InvalidAttributeValueException if the variable's type is integer and the value is not
-         */
-        public NumVariable(VarType type, double value, double upBound, double lowBound) throws InvalidAttributeValueException {
-            if (type == VarType.INT && !isInt(value))
-                throw new InvalidAttributeValueException(VALUE_NOT_INT_ERROR);
-            this.type = type;
-            this.value = value;
-            this.lowBound = lowBound;
-            this.upBound = upBound;
-        }
-
-        /**
-         * @return {@code True} if the value is integer, {@code False} otherwise
-         */
-        public boolean isInt() {
-            return isInt(value);
-        }
-
-        /**
-         * @param value A numerical value
-         * @return {@code True} if the value is integer
-         */
-        private boolean isInt(double value) {
-            return value % 2 == 0;
-        }
-
-        /**
-         * @return The variable's type
-         */
-        public VarType getType() {
-            return type;
-        }
-
-        /**
-         * @param type The new type for the variable
-         * @throws InvalidAttributeValueException if the variable's type is integer and the value is not
-         */
-        public void setType(VarType type) throws InvalidAttributeValueException {
-            if (type == VarType.INT && !isInt(value))
-                throw new InvalidAttributeValueException(VALUE_NOT_INT_ERROR);
-            this.type = type;
-        }
-
-        /**
-         * @return The variable's current value
-         */
-        public double getValue() {
-            return value;
-        }
-
-        /**
-         * @param value The new value for the variable
-         * @throws InvalidAttributeValueException if the variable's type is integer and the value is not
-         */
-        public void setValue(double value) throws InvalidAttributeValueException {
-            if (type == VarType.INT && !isInt(value))
-                throw new InvalidAttributeValueException(VALUE_NOT_INT_ERROR);
-            this.value = value;
-        }
-
-        /**
-         * @return The variable's current lower bound
-         */
-        public double getLowBound() {
-            return lowBound;
-        }
-
-        /**
-         * @param lowBound The new lower bound
-         */
-        public void setLowBound(double lowBound) {
-            this.lowBound = lowBound;
-        }
-
-        /**
-         * @return The variable's current upper bound
-         */
-        public double getUpBound() {
-            return upBound;
-        }
-
-        /**
-         * @param upBound The new upper bound
-         */
-        public void setUpBound(double upBound) {
-            this.upBound = upBound;
-        }
-    }
 
     public enum VarType {
         INT,
@@ -307,3 +281,5 @@ public class MMipModel {
     }
 
 }
+
+

@@ -1,0 +1,12 @@
+package heuristics.interfaces;
+
+public interface Heuristic {
+
+    /**
+     * Applies its heuristic algorithm
+     */
+    void applyHeuristic();
+
+
+    void setHeuristicListener(HeuristicListener listener);
+}

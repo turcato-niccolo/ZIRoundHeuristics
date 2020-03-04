@@ -7,8 +7,8 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="cplex" level="project" />
-    <orderEntry type="module-library">
+    <orderEntry type="library" exported="" name="cplex" level="project" />
+    <orderEntry type="module-library" exported="">
       <library name="JUnit4">
         <CLASSES>
           <root url="jar://$MAVEN_REPOSITORY$/junit/junit/4.12/junit-4.12.jar!/" />
@@ -18,7 +18,7 @@
         <SOURCES />
       </library>
     </orderEntry>
-    <orderEntry type="module-library">
+    <orderEntry type="module-library" exported="">
       <library name="JUnit5.4">
         <CLASSES>
           <root url="jar://$MAVEN_REPOSITORY$/org/junit/jupiter/junit-jupiter/5.4.2/junit-jupiter-5.4.2.jar!/" />
@@ -34,7 +34,8 @@
         <SOURCES />
       </library>
     </orderEntry>
-    <orderEntry type="library" name="org.jetbrains:annotations:16.0.2" level="project" />
-    <orderEntry type="library" name="java" level="project" />
+    <orderEntry type="library" exported="" name="org.jetbrains:annotations:16.0.2" level="project" />
+    <orderEntry type="library" exported="" name="ortools-java" level="project" />
+    <orderEntry type="library" exported="" name="org.junit.jupiter:junit-jupiter:5.4.2" level="project" />
   </component>
 </module>
